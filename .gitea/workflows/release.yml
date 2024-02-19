@@ -1,0 +1,44 @@
+name: Release
+on:
+  push:
+#  release:
+#    types:
+#      - published
+
+jobs:
+#  validate:
+#    runs-on: hadolint
+#    continue-on-error: true
+#    steps:
+#      - name: Setup
+#        run: |
+#          apt update
+#          apt install -y git nodejs
+#      - name: Checkout Code
+#        uses: actions/checkout@v3
+#      - name: Validate Dockerfile
+#        run: |
+#          hadolint Dockerfile | tee hadolint-result.xml
+
+  build-deploy:
+    runs-on: ubuntu-22.04
+    # needs: validate
+    env:
+      IMAGE_NAME: ecw74/photosync
+    steps:
+      - name: Setup
+        run: |
+          apt-get update
+          apt-get install -y git nodejs curl apt-utils
+          curl -fsSL https://get.docker.com | sh
+      - name: Checkout Code
+        uses: actions/checkout@v4
+      - name: Build
+        run: DOCKER_BUILDKIT=1 docker build -t ${{ env.IMAGE_NAME }}:latest .
+      - name: Deploy
+        if: github.event_name == 'release'
+        run: |
+          docker login -u ${{ secrets.DOCKERHUB_USERNAME }} -p ${{ secrets.DOCKERHUB_TOKEN }}
+          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+          docker push ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+          docker push ${{ env.IMAGE_NAME }}:latest
