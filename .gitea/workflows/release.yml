@@ -45,4 +45,4 @@ jobs:
         if: github.event_name == 'release'
         with:
           push: true
-          tags:  ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
+          tags:  ${{ env.IMAGE_NAME }}:latest,${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
