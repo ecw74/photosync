@@ -22,26 +22,27 @@ jobs:
 
   build-deploy:
     runs-on: ubuntu-22.04
+    container:
+      image: catthehacker/ubuntu:act-latest
     needs: validate
     env:
       IMAGE_NAME: ecw74/photosync
     steps:
-      - name: Setup
-        run: |
-          apt-get update
-          apt-get install -y git nodejs curl apt-utils
-          curl -fsSL https://get.docker.com | sh
       - name: Checkout Code
         uses: actions/checkout@v4
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: "${{ secrets.DOCKERHUB_USERNAME }}"
+          password: "${{ secrets.DOCKERHUB_TOKEN }}"
       - name: Build
-        run: DOCKER_BUILDKIT=1 docker build -t ${{ env.IMAGE_NAME }}:latest .
+        uses: docker/build-push-action@v6
+        with:
+          tags:  ${{ env.IMAGE_NAME }}:latest
+          no-cache: true
       - name: Deploy
+        uses: docker/build-push-action@v6
         if: github.event_name == 'release'
-        run: |
-          mkdir -p "$HOME/.docker"
-          auth=$(echo "${{ secrets.DOCKERHUB_USERNAME }}:${{ secrets.DOCKERHUB_TOKEN }}" | tr -d '\n' | base64 -i -w 0)
-          echo "{\"auths\": {\"https://index.docker.io/v1/\": {\"auth\": \"${auth}\"}}}" > "$HOME/.docker/config.json"
-          docker login
-          docker tag ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
-          docker push ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
-          docker push ${{ env.IMAGE_NAME }}:latest
+        with:
+          push: true
+          tags:  ${{ env.IMAGE_NAME }}:latest ${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }}
